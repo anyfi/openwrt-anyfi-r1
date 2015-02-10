@@ -1,0 +1,86 @@
+#!/bin/sh
+#
+# Copyright (C) 2015 Anyfi Networks AB
+#
+# This configuration script is licensed under the MIT License.
+# See /LICENSE for more information.
+#
+
+DEFAULT_CONTROLLER_HOST=@ANYFI_CONTROLLER@
+DEFAULT_CONTROLLER_KEY=@ANYFI_CONTROLLER_KEY@
+DEFAULT_OPTIMIZER_KEY=@ANYFI_OPTIMIZER_KEY@
+ENABLE_RADIO=@ANYFI_ENABLE_RADIO@
+ENABLE_SERVICE=@ANYFI_ENABLE_SERVICE@
+
+# Don't do anything if the UCI config is present
+! [ -e /etc/config/anyfi ] || exit 0
+
+# Find a unique ifname
+get_ifname() {
+	local base=$1
+	local idx=0
+	while uci show wireless | grep -q "ifname=$base$idx$"; do
+		idx=$(($idx + 1))
+        done
+        echo $base$idx
+}
+
+# Generate the global Anyfi.net configuration
+cat <<EOF >/etc/config/anyfi
+config anyfi controller
+config anyfi optimizer
+EOF
+
+[ -n "$DEFAULT_CONTROLLER_HOST" ] && \
+    uci set anyfi.controller.hostname=$DEFAULT_CONTROLLER_HOST
+[ -n "$DEFAULT_CONTROLLER_KEY" ] && \
+    uci set anyfi.controller.key=$DEFAULT_CONTROLLER_KEY
+[ -n "$DEFAULT_OPTIMIZER_KEY" ] && \
+    uci set anyfi.optimizer.key=$DEFAULT_OPTIMIZER_KEY
+
+# Add a service configuration on the main Wi-Fi interface for remote access
+if [ "$(uci -q get wireless.@wifi-iface[0])" = wifi-iface ]; then
+	IFNAME=$(uci -q get wireless.@wifi-iface[0].ifname)
+	IFNAME=${IFNAME:-$(get_ifname wlan)}
+	uci set wireless.@wifi-iface[0].ifname=$IFNAME
+
+	uci set anyfi.$IFNAME=service
+	if [ "$ENABLE_SERVICE" = y ]; then
+		echo "Remote access enabled on interface $IFNAME."
+	else
+		uci set anyfi.$IFNAME.disabled=1
+	fi
+fi
+
+. /lib/functions.sh
+config_load wireless
+
+# Add radio configurations on all Wi-Fi devices for guest access
+for DEV in $CONFIG_SECTIONS; do
+	if [ "$(config_get $DEV TYPE)" = wifi-device ]; then
+		HWTYPE=$(config_get $DEV type)
+
+		if [ -e /lib/anyfi/anyfi_${HWTYPE}.sh ]; then
+			MONITOR=$(get_ifname monitor)
+			IFACE=$(uci add wireless wifi-iface)
+
+			echo "Adding monitor interface $MONITOR."
+			uci set wireless.$IFACE.device=$DEV
+			uci set wireless.$IFACE.mode=monitor
+			uci set wireless.$IFACE.ifname=$MONITOR
+
+			uci set anyfi.$MONITOR=radio
+
+			if [ "$ENABLE_RADIO" != y ]; then
+				uci set anyfi.$MONITOR.disabled=1
+			else
+				echo "Guest access enabled on device $DEV."
+			fi
+		else
+			echo "Anyfi.net guest access is not supported on $HWTYPE."
+		fi
+	fi
+done
+
+uci commit wireless
+uci commit anyfi

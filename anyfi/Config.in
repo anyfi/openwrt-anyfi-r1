@@ -1,0 +1,35 @@
+menu "Configuration"
+	depends on PACKAGE_anyfi-mac
+
+config ANYFI_CONTROLLER
+	string "Controller IP or FQDN"
+	help
+          The default IP address or fully qualified domain name (FQDN)
+	  of the controller that should manage the Anyfi.net software.
+
+config ANYFI_CONTROLLER_KEY
+	string "Controller key"
+	help
+          The SHA-256 fingerprint of the Controller RSA key.
+
+config ANYFI_OPTIMIZER_KEY
+	string "Optimizer key"
+	help
+          The SHA-256 fingerprint of the Optimizer RSA key.
+
+config ANYFI_ENABLE_RADIO
+	bool "Enable radio"
+	default y
+	help
+          Configure anyfid to register all local Wi-Fi Radios in the Controller
+          so that spare radio resources can be used for mobile Wi-Fi services.
+
+config ANYFI_ENABLE_SERVICE
+	bool "Enable service"
+	default y
+	help
+          Configure myfid to register the local Wi-Fi network as a Service in
+          the Controller, making it possible to provide seamless remote access
+          to this network.
+
+endmenu

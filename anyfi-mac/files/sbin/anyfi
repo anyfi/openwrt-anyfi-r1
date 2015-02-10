@@ -1,0 +1,82 @@
+#!/bin/sh
+#
+# Copyright (C) 2015 Anyfi Networks AB
+#
+# This configuration script is licensed under the MIT License.
+# See /LICENSE for more information.
+#
+
+. /lib/functions.sh
+. /lib/anyfi/anyfi.sh
+
+config_load wireless
+
+CONTROLLER=$(uci -q get anyfi.controller.hostname)
+CONTROLLER_KEY=$(uci -q get anyfi.controller.key)
+OPTIMIZER_KEY=$(uci -q get anyfi.optimizer.key)
+
+# anyfi_enable_cb <section> [ifname]
+anyfi_enable_cb() {
+	local section=$1
+	local ifname=$(config_get $section ifname)
+
+	if [ -n "$ifname" ] && [ "$ifname" = "${2:-$ifname}" ] && \
+	   [ "$(uci -q get anyfi.$ifname.disabled)" != 1 ]
+	then
+		case "$(uci -q get anyfi.$ifname)" in
+			radio)
+				anyfi_start_radio $section $CONTROLLER \
+				                  $CONTROLLER_KEY
+				;;
+
+			service)
+				anyfi_start_service $section $CONTROLLER \
+				          $CONTROLLER_KEY $OPTIMIZER_KEY
+				;;
+		esac
+	fi
+}
+
+# anyfi_disable_cb <section>
+anyfi_disable_cb() {
+	local ifname=$(config_get $1 ifname)
+
+	if [ -n "$ifname" ]; then
+		anyfi_stop_radio $ifname
+		anyfi_stop_service $ifname
+	fi
+}
+
+# anyfi_enable [ifname]
+anyfi_enable() {
+	if [ -n "$CONTROLLER" ]; then
+		config_foreach anyfi_enable_cb wifi-iface $1
+	fi
+}
+
+# anyfi_disable [ifname]
+anyfi_disable() {
+	local ifname=$1
+
+	if [ -n "$ifname" ]; then
+		anyfi_stop_radio $ifname
+		anyfi_stop_service $ifname
+	else
+		config_foreach anyfi_disable_cb wifi-iface
+	fi
+}
+
+case $1 in
+	start)
+		anyfi_disable $2
+		anyfi_enable $2
+		;;
+
+	stop)
+		anyfi_disable $2
+		;;
+
+	*)
+		echo "Usage: $0 [start|stop]"
+		;;
+esac
