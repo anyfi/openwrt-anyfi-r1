@@ -12,6 +12,13 @@ PKG_VERSION := 1.0
 PKG_RELEASE := 1
 PKG_LICENSE := MIT
 
+PKG_CONFIG_DEPENDS := \
+		CONFIG_PACKAGE_anyfi_controller \
+		CONFIG_PACKAGE_anyfi_controller_key \
+		CONFIG_PACKAGE_anyfi_optimizer_key \
+		CONFIG_PACKAGE_anyfi_enable_radio \
+		CONFIG_PACKAGE_anyfi_enable_service
+
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)-$(PKG_RELEASE)
 
 include $(INCLUDE_DIR)/package.mk
@@ -36,11 +43,11 @@ endef
 
 define Build/Configure
 	cp templates/99_config_anyfi.in $(PKG_BUILD_DIR)/99_config_anyfi
-	sed -i -e 's/@ANYFI_CONTROLLER@/$(CONFIG_ANYFI_CONTROLLER)/' \
-	       -e 's/@ANYFI_CONTROLLER_KEY@/$(CONFIG_ANYFI_CONTROLLER_KEY)/' \
-	       -e 's/@ANYFI_OPTIMIZER_KEY@/$(CONFIG_ANYFI_OPTIMIZER_KEY)/' \
-	       -e 's/@ANYFI_ENABLE_RADIO@/$(CONFIG_ANYFI_ENABLE_RADIO)/' \
-	       -e 's/@ANYFI_ENABLE_SERVICE@/$(CONFIG_ANYFI_ENABLE_SERVICE)/' \
+	sed -i -e 's/@ANYFI_CONTROLLER@/$(CONFIG_PACKAGE_anyfi_controller)/' \
+	       -e 's/@ANYFI_CONTROLLER_KEY@/$(CONFIG_PACKAGE_anyfi_controller_key)/' \
+	       -e 's/@ANYFI_OPTIMIZER_KEY@/$(CONFIG_PACKAGE_anyfi_optimizer_key)/' \
+	       -e 's/@ANYFI_ENABLE_RADIO@/$(CONFIG_PACKAGE_anyfi_enable_radio)/' \
+	       -e 's/@ANYFI_ENABLE_SERVICE@/$(CONFIG_PACKAGE_anyfi_enable_service)/' \
 	    $(PKG_BUILD_DIR)/99_config_anyfi
 endef
 
@@ -52,17 +59,25 @@ define Package/anyfi/conffiles
 endef
 
 define Package/anyfi/postinst
-#!/bin/sh
+#!/bin/sh -e
 if [ -z "$${IPKG_INSTROOT}" ]; then
     /etc/uci-defaults/99_config_anyfi && rm /etc/uci-defaults/99_config_anyfi
-    echo "Please run /sbin/wifi to apply the configuration."
+    [ -n "$(CONFIG_PACKAGE_anyfi_controller)" ] || cat << EOF
+
+Congrats, the installation seems to have gone well. Now you just need to
+configure a controller:
+
+      root@OpenWrt:/# uci set anyfi.controller.hostname=demo.anyfi.net
+      root@OpenWrt:/# uci commit
+
+EOF
+    echo "Friendly reminder: run /sbin/wifi to apply the configuration. :)"
 fi
 endef
 
 define Package/anyfi/prerm
 #!/bin/sh
 if [ -z "$${IPKG_INSTROOT}" ]; then
-    echo "Stopping Anyfi.net daemons."
     /sbin/anyfi stop
     . /lib/functions.sh
     config_load wireless
