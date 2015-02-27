@@ -437,7 +437,7 @@ anyfi_vif_start() {
 		# has changed or myfid is started for the first time
 		local new_key="$(config_get $iface key)"
 		local old_key="$(anyfi_vif_get_config $conf_file passphrase)"
-		[ "$key" == "$old_key" ] || args="$args --reset"
+		[ "$new_key" == "$old_key" ] || args="$args --reset"
 
 		# Update the myfid config file in flash only if needed
 		if ! cmp -s $new_conf_file $conf_file; then

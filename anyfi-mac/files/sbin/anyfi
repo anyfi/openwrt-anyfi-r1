@@ -26,12 +26,12 @@ anyfi_enable_cb() {
 		case "$(uci -q get anyfi.$ifname)" in
 			radio)
 				anyfi_start_radio $section $CONTROLLER \
-				                  $CONTROLLER_KEY
+				                  "$CONTROLLER_KEY"
 				;;
 
 			service)
 				anyfi_start_service $section $CONTROLLER \
-				          $CONTROLLER_KEY $OPTIMIZER_KEY
+				          "$CONTROLLER_KEY" "$OPTIMIZER_KEY"
 				;;
 		esac
 	fi
