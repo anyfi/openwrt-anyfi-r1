@@ -29,6 +29,7 @@ define Package/anyfi
   TITLE      := Anyfi.net - Carrier Wi-Fi on any AP or CPE
   URL        := http://anyfi.net
   DEPENDS    := +anyfi-mac
+  PKGARCH    := all
   MAINTAINER := Anyfi Networks AB <eng@anyfinetworks.com>
 endef
 
