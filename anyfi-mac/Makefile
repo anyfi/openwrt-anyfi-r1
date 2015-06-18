@@ -7,7 +7,14 @@
 
 include $(TOPDIR)/rules.mk
 
-ANYFI_TARGET := $(ARCH)-linux-$(subst C,c,$(LIBC))-$(LIBCV)
+# Use the smaller and faster mips32 binary if possible
+ifeq ($(CONFIG_TARGET_ar71xx),y)
+ANYFI_ARCH := mips32
+else
+ANYFI_ARCH := $(ARCH)
+endif
+
+ANYFI_TARGET := $(ANYFI_ARCH)-linux-$(subst C,c,$(LIBC))-$(LIBCV)
 
 PKG_NAME    := anyfi-mac
 PKG_VERSION := 1.9.6
