@@ -10,8 +10,8 @@ include $(TOPDIR)/rules.mk
 ANYFI_TARGET := $(ARCH)-linux-$(subst C,c,$(LIBC))-$(LIBCV)
 
 PKG_NAME    := anyfi-mac
-PKG_VERSION := 1.8.1
-PKG_RELEASE := 2
+PKG_VERSION := 1.9.6
+PKG_RELEASE := 1
 
 PKG_LICENSE := ANYFIv1
 PKG_LICENSE_FILES := LICENSE
