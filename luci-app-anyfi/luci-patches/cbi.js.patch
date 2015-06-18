@@ -1,0 +1,14 @@
+--- a/luci-base/htdocs/luci-static/resources/cbi.js	2015-06-17 13:09:29.890736299 +0200
++++ b/luci-base/htdocs/luci-static/resources/cbi.js	2015-06-17 13:15:11.484430163 +0200
+@@ -184,6 +184,11 @@
+ 			return (v.length == 5) || (v.length == 13);
+ 	},
+ 
++	'hexkey': function()
++	{
++		return (this.match(/^[a-fA-F0-9]+$/) != null);
++	},
++
+ 	'uciname': function()
+ 	{
+ 		return (this.match(/^[a-zA-Z0-9_]+$/) != null);

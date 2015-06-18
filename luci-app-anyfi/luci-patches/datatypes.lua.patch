@@ -1,0 +1,13 @@
+--- a/luci-base/luasrc/cbi/datatypes.lua	2015-06-17 13:10:51.943143168 +0200
++++ b/luci-base/luasrc/cbi/datatypes.lua	2015-06-17 13:13:47.480013612 +0200
+@@ -204,6 +204,10 @@
+ 	end
+ end
+ 
++function hexkey(val)
++	return (val:match("^[a-fA-F0-9]+$") ~= nil)
++end
++
+ function string(val)
+ 	return true		-- Everything qualifies as valid string
+ end

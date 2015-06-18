@@ -1,0 +1,134 @@
+--- a/luci-mod-admin-full/luasrc/model/cbi/admin_network/wifi.lua	2015-06-18 08:13:28.242335231 +0200
++++ b/luci-mod-admin-full/luasrc/model/cbi/admin_network/wifi.lua	2015-06-18 08:15:27.010924172 +0200
+@@ -20,6 +20,7 @@
+ m.redirect = luci.dispatcher.build_url("admin/network/wireless")
+ 
+ local ifsection
++local anyfi_changed = false
+ 
+ function m.on_commit(map)
+ 	local wnet = nw:get_wifinet(arg[1])
+@@ -27,6 +28,9 @@
+ 		ifsection.section = wnet.sid
+ 		m.title = luci.util.pcdata(wnet:get_i18n())
+ 	end
++	if anyfi_changed then
++		luci.sys.call("/sbin/anyfi start")
++	end
+ end
+ 
+ nw.init(m.uci)
+@@ -108,6 +112,7 @@
+ s:tab("general", translate("General Setup"))
+ s:tab("macfilter", translate("MAC-Filter"))
+ s:tab("advanced", translate("Advanced Settings"))
++s:tab("mobility", "Anyfi.net")
+ 
+ --[[
+ back = s:option(DummyValue, "_overview", translate("Overview"))
+@@ -347,6 +352,72 @@
+ 	s:taboption("advanced", Value, "rxantenna", translate("Receiver Antenna"))
+ end
+ 
++------------------- Anyfi.net configuration helpers (by Anyfi Networks AB)
++
++local anyfi_controller = m.uci:get("anyfi", "controller", "hostname")
++
++function m.on_save(map)
++	m.uci:commit("anyfi")
++end
++
++function wdev.ifname(self)
++	for _, wn in ipairs(wdev:get_wifinets()) do
++		if wn:get("mode") == "monitor" then return wn:ifname() end
++	end
++end
++function get_ifname(section)
++	if m.uci:get("wireless", section) == "wifi-device" then return wdev:ifname() else return wnet:ifname() end
++end
++
++function anyfi_cfgvalue(self, section)
++	return m.uci:get("anyfi", get_ifname(section), self.option)
++end
++function anyfi_write(self, section, value)
++	m.uci:set("anyfi", get_ifname(section), self.option, value)
++	anyfi_changed = true
++end
++function anyfi_remove(self, section)
++	m.uci:delete("anyfi", get_ifname(section), self.option)
++	anyfi_changed = true
++end
++
++------------------- Anyfi.net device configuration (by Anyfi Networks AB)
++
++if fs.access('/usr/sbin/anyfid') and hwtype == "mac80211" and anyfi_controller and anyfi_controller ~= "" and wdev:ifname() then
++        anyfi_disabled = s:taboption("mobility", Flag, "disabled", translate("Guest Access"),
++				     translate("Allow mobile devices to connect to remote Wi-Fi networks through this radio."))
++	anyfi_disabled.enabled = 0
++	anyfi_disabled.disabled = 1
++	anyfi_disabled.default = 0
++	anyfi_disabled.rmempty = true
++	anyfi_disabled.cfgvalue = anyfi_cfgvalue
++	anyfi_disabled.write = anyfi_write
++	anyfi_disabled.remove = anyfi_remove
++
++	anyfi_floor = s:taboption("mobility", ListValue, "floor", translate("Minimum Bandwidth"),
++				  translate("The share of total bandwidth that is always available to mobile devices."))
++	anyfi_floor:depends("disabled", "0")
++	anyfi_floor:value("1", "Minimal (1%)")
++	anyfi_floor:value("5", "Low (5%)")
++	anyfi_floor:value("10", "Medium (10%)")
++	anyfi_floor:value("25", "High (25%)")
++	anyfi_floor.default = "5"
++	anyfi_floor.cfgvalue = anyfi_cfgvalue
++	anyfi_floor.write = anyfi_write
++	anyfi_floor.remove = anyfi_remove
++
++	anyfi_ceil = s:taboption("mobility", ListValue, "ceiling", translate("Maximum Bandwidth"),
++				 translate("The maximum share of total bandwidth that can be allocated to mobile devices."))
++	anyfi_ceil:depends("disabled", "0")
++	anyfi_ceil:value("25", "Minimal (25%)")
++	anyfi_ceil:value("50", "Low (50%)")
++	anyfi_ceil:value("75", "Medium (75%)")
++	anyfi_ceil:value("100", "High (100%)")
++	anyfi_ceil.default = "75"
++	anyfi_ceil.cfgvalue = anyfi_cfgvalue
++	anyfi_ceil.write = anyfi_write
++	anyfi_ceil.remove = anyfi_remove
++end
+ 
+ ----------------------- Interface -----------------------
+ 
+@@ -360,6 +431,7 @@
+ s:tab("encryption", translate("Wireless Security"))
+ s:tab("macfilter", translate("MAC-Filter"))
+ s:tab("advanced", translate("Advanced Settings"))
++s:tab("mobility", "Anyfi.net")
+ 
+ s:taboption("general", Value, "ssid", translate("<abbr title=\"Extended Service Set Identifier\">ESSID</abbr>"))
+ 
+@@ -943,4 +1015,24 @@
+ 	end
+ end
+ 
++------------------- Anyfi.net interface configuration (by Anyfi Networks AB)
++
++if fs.access('/usr/sbin/myfid') and anyfi_controller and anyfi_controller ~= "" and wnet:ifname() then
++	anyfi_disabled = s:taboption("mobility", Flag, "disabled", translate("Remote Access"),
++				     translate("Enable seamless and secure remote access to this Wi-Fi network for mobile devices."))
++	anyfi_disabled.enabled = 0
++	anyfi_disabled.disabled = 1
++	anyfi_disabled.default = 0
++	anyfi_disabled.rmempty = true
++	anyfi_disabled:depends({mode="ap", encryption="psk"})
++	anyfi_disabled:depends({mode="ap", encryption="psk2"})
++	anyfi_disabled:depends({mode="ap", encryption="psk-mixed"})
++	anyfi_disabled:depends({mode="ap", encryption="wpa"})
++	anyfi_disabled:depends({mode="ap", encryption="wpa2"})
++	anyfi_disabled:depends({mode="ap", encryption="wpa-mixed"})
++	anyfi_disabled.cfgvalue = anyfi_cfgvalue
++	anyfi_disabled.write = anyfi_write
++	anyfi_disabled.remove = anyfi_remove
++end
++
+ return m
