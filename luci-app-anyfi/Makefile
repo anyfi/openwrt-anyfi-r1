@@ -16,6 +16,8 @@ PKG_LICENSE := MIT
 PKG_SRC_DIR := $(shell pwd)
 PKG_BUILD_DIR := $(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)-$(PKG_RELEASE)
 
+PKG_BUILD_DEPENDS:=luci
+
 include $(INCLUDE_DIR)/package.mk
 
 define Package/$(PKG_NAME)
