@@ -17,7 +17,7 @@ endif
 ANYFI_TARGET := $(ANYFI_ARCH)-linux-$(subst C,c,$(LIBC))-$(LIBCV)
 
 PKG_NAME    := anyfi-mac
-PKG_VERSION := 1.9.6
+PKG_VERSION := 1.9.8
 PKG_RELEASE := 1
 
 PKG_LICENSE := ANYFIv1
