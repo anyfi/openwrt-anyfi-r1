@@ -7,12 +7,11 @@
 
 include $(TOPDIR)/rules.mk
 
-# Use the smaller and faster mips32 binary if possible
-ifeq ($(CONFIG_TARGET_ar71xx),y)
-ANYFI_ARCH := mips32
-else
-ANYFI_ARCH := $(ARCH)
-endif
+# Use the smaller and faster mips32/mips32el binary if possible
+ARCH-y = $(ARCH)
+ARCH-$(CONFIG_TARGET_ar71xx) = mips32
+ARCH-$(CONFIG_TARGET_ramips) = mips32el
+ANYFI_ARCH := $(ARCH-y)
 
 ANYFI_TARGET := $(ANYFI_ARCH)-linux-$(subst C,c,$(LIBC))-$(LIBCV)
 
