@@ -77,7 +77,7 @@ anyfi_mac80211_alloc_iflist() {
 # anyfi_mac80211_release_iflist <device>
 anyfi_mac80211_release_iflist() {
 	local ifbase=$(anyfi_mac80211_name_iface $1 "")
-	local ifaces=$(ifconfig -a | grep -o '^[^ ]\+' | grep $ifbase)
+	local ifaces=$(ifconfig -a | grep -E -o '^[^ ]+' | grep $ifbase)
 	local ifname
 
 	# Remove our virtual interfaces

@@ -19,7 +19,7 @@ ENABLE_SERVICE=@ANYFI_ENABLE_SERVICE@
 get_ifname() {
 	local base=$1
 	local idx=0
-	while uci show wireless | grep -q "ifname=$base$idx$"; do
+	while uci show wireless | grep -q "ifname='*$base$idx'*$"; do
 		idx=$(($idx + 1))
         done
         echo $base$idx
