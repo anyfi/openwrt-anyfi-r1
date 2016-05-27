@@ -1,0 +1,177 @@
+#!/bin/sh
+# Copyright (C) 2016 Anyfi Networks AB <www.anyfinetworks.com>
+
+#############################
+#   Entry point functions   #
+#############################
+
+prefix_list="$prefix_list $DMROOT.LANDevice."
+entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Radio"
+
+entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Radio() {
+	case "$1" in ""|"$DMROOT."|"$DMROOT.LANDevice."*)
+		common_execute_method_obj "$DMROOT.LANDevice.1.WLANConfiguration." "1" "" "" "anyfi_radio_browse_instances_wlan_iface $1"
+		return 0
+		;;
+	esac
+	return $E_INVALID_PARAMETER_NAME;
+}
+
+sub_entry_landevice_wlanconfig_anyfi_radio() {
+	local j="$2"
+	local iface="$3"
+	local monitor="$4"
+	case_param "$1" belongto "$DMROOT.LANDevice.1.WLANConfiguration.$j." && {
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Enable" "1" "anyfi_radio_get_enable $monitor" "anyfi_radio_set_enable $monitor" "xsd:boolean"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Status" "0" "anyfi_radio_get_status $monitor $iface" "" ""
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.WANInterface" "1" "anyfi_radio_get_wan_iface $monitor" "anyfi_radio_set_wan_iface $monitor" ""
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.WANPort" "1" "anyfi_radio_get_wan_port $monitor" "anyfi_radio_set_wan_port $monitor" "xsd:int"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.WANUplinkCapacity" "1" "anyfi_radio_get_wan_uplink $monitor" "anyfi_radio_set_wan_uplink $monitor" "xsd:int"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.WANDownlinkCapacity" "1" "anyfi_radio_get_wan_downlink $monitor" "anyfi_radio_set_wan_downlink $monitor" "xsd:int"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.MaxBSSIDs" "1" "anyfi_radio_get_max_bssids $monitor" "anyfi_radio_set_max_bssids $monitor" "xsd:int"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.MaxClients" "1" "anyfi_radio_get_max_clients $monitor" "anyfi_radio_set_max_clients $monitor" "xsd:int"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Floor" "1" "anyfi_radio_get_floor $monitor" "anyfi_radio_set_floor $monitor" "xsd:unsignedInt"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Ceiling" "1" "anyfi_radio_get_ceiling $monitor" "anyfi_radio_set_ceiling $monitor" "xsd:unisgnedInt"
+		return 0
+	}
+	return $E_INVALID_PARAMETER_NAME;
+}
+
+#######################################
+#     Data model browse instances     #
+#######################################
+
+anyfi_radio_browse_instances_wlan_iface() {
+	local iface ifaces=`$UCI_SHOW wireless | grep "wireless\.@wifi-iface\[.*\]=wifi-iface" | awk -F'[.=]' '{print $2}'` 
+	for iface in $ifaces; do
+		local monitor=`$UCI_GET wireless.$iface.ifname`
+		if [ -n "$monitor" -a "`$UCI_GET anyfi.$monitor`" = radio ]; then
+			local j=`lan_device_update_instance $iface`
+			sub_entry_landevice_wlanconfig_anyfi_radio "$1" "$j" "$iface" "$monitor"
+		fi
+	done
+	return 0
+}
+
+#######################################
+#   Data model parameters functions   #
+#######################################
+
+ANYFI_DEFAULT_FLOOR=5
+ANYFI_DEFAULT_CELING=75
+
+anyfi_radio_get_enable() {
+	local val=`$UCI_GET anyfi.$1.disabled`
+	[ "$val" = "1" ] && echo "0" || echo "1"
+}
+
+anyfi_radio_set_enable() {
+	local val="$2"
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+	common_set_bool "anyfi.$1.disabled" "$val" "0" "1" || return $?
+	[ `$UCI_GET anyfi.$1.disabled` = 1 ] || $UCI_DELETE anyfi.$1.disabled || return $E_INVALID_PARAMETER_NAME
+}
+
+anyfi_radio_get_status() {
+	local enable=`anyfi_radio_get_enable $1`
+	local device=`$UCI_GET wireless.$2.device`
+	local pid=`cat /var/run/anyfid-$device.pid`
+	if [ "$enable" = 1 ] && kill -0 $pid; then echo "Enabled"
+	elif [ "$enable" = 0 ] && ! kill -0 $pid; then echo "Disabled"
+	else echo "Error"
+	fi
+}
+
+anyfi_radio_get_wan_iface() {
+	$UCI_GET anyfi.$1.wan_ifname
+}
+
+anyfi_radio_set_wan_iface() {
+	local val="$2"
+	[ -z "$val" ] || ifconfig "$val" >/dev/null 2>&1 || return $E_INVALID_PARAMETER_VALUE
+	[ -z "$val" ] || $UCI_SET anyfi.$1.wan_ifname="$val" || return $E_INVALID_PARAMETER_NAME
+	[ -n "$val" ] || $UCI_DELETE anyfi.$1.wan_ifname || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+
+anyfi_radio_get_wan_port() {
+	$UCI_GET anyfi.$1.wan_port || echo -1
+}
+
+anyfi_radio_set_wan_port() {
+	local val="$2"
+	[ "$val" -eq 0 -o "$val" -gt 65535 ] && return $E_INVALID_PARAMETER_VALUE
+	[ "$val" -lt 0 ] || $UCI_SET anyfi.$1.wan_port="$val" || return $E_INVALID_PARAMETER_NAME
+	[ "$val" -gt 0 ] || $UCI_DELETE anyfi.$1.wan_port || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+
+anyfi_radio_get_wan_uplink() {
+	$UCI_GET anyfi.$1.wan_uplink_bps || echo -1
+}
+
+anyfi_radio_set_wan_uplink() {
+	local val="$2"
+	[ "$val" -eq 0 ] && return $E_INVALID_PARAMETER_VALUE
+	[ "$val" -lt 0 ] || $UCI_SET anyfi.$1.wan_uplink_bps="$val" || return $E_INVALID_PARAMETER_NAME
+	[ "$val" -gt 0 ] || $UCI_DELETE anyfi.$1.wan_uplink_bps || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+
+anyfi_radio_get_wan_downlink() {
+	$UCI_GET anyfi.$1.wan_downlink_bps || echo -1
+}
+
+anyfi_radio_set_wan_downlink() {
+	local val="$2"
+	[ "$val" -eq 0 ] && return $E_INVALID_PARAMETER_VALUE
+	[ "$val" -lt 0 ] || $UCI_SET anyfi.$1.wan_downlink_bps="$val" || return $E_INVALID_PARAMETER_NAME
+	[ "$val" -gt 0 ] || $UCI_DELETE anyfi.$1.wan_downlink_bps || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+
+anyfi_radio_get_max_bssids() {
+	$UCI_GET anyfi.$1.max_bssids || echo -1
+}
+
+anyfi_radio_set_max_bssids() {
+	local val="$2"
+	[ "$val" -eq 0 ] && return $E_INVALID_PARAMETER_VALUE
+	[ "$val" -lt 0 ] || $UCI_SET anyfi.$1.max_bssids="$val" || return $E_INVALID_PARAMETER_NAME
+	[ "$val" -gt 0 ] || $UCI_DELETE anyfi.$1.max_bssids || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+
+anyfi_radio_get_max_clients() {
+	$UCI_GET anyfi.$1.max_clients || echo -1
+}
+
+anyfi_radio_set_max_clients() {
+	local val="$2"
+	[ "$val" -eq 0 ] && return $E_INVALID_PARAMETER_VALUE
+	[ "$val" -lt 0 ] || $UCI_SET anyfi.$1.max_clients="$val" || return $E_INVALID_PARAMETER_NAME
+	[ "$val" -gt 0 ] || $UCI_DELETE anyfi.$1.max_clients || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+
+anyfi_radio_get_floor() {
+	$UCI_GET anyfi.$1.floor || echo $ANYFI_DEFAULT_FLOOR
+}
+
+anyfi_radio_set_floor() {
+	local val="$2"
+	[ "$val" -lt 0 -o "$val" -gt 100 ] && return $E_INVALID_PARAMETER_VALUE
+	$UCI_SET anyfi.$1.floor="$val" || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+
+anyfi_radio_get_ceiling() {
+	$UCI_GET anyfi.$1.ceiling || echo $ANYFI_DEFAULT_CEILING
+}
+
+anyfi_radio_set_ceiling() {
+	local val="$2"
+	[ "$val" -lt 0 -o "$val" -gt 100 ] && return $E_INVALID_PARAMETER_VALUE
+	$UCI_SET anyfi.$1.ceiling="$val" || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}

@@ -1,0 +1,97 @@
+#!/bin/sh
+# Copyright (C) 2016 Anyfi Networks AB <www.anyfinetworks.com>
+
+#############################
+#   Entry point functions   #
+#############################
+
+prefix_list="$prefix_list $DMROOT.LANDevice."
+entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Service"
+
+entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Service() {
+	case "$1" in ""|"$DMROOT."|"$DMROOT.LANDevice."*)
+		common_execute_method_obj "$DMROOT.LANDevice.1.WLANConfiguration." "1" "" "" "anyfi_service_browse_instances_wlan_iface $1"
+		return 0
+		;;
+	esac
+	return $E_INVALID_PARAMETER_NAME;
+}
+
+sub_entry_landevice_wlanconfig_anyfi_service() {
+	local j="$2"
+	local ifname="$3"
+	case_param "$1" belongto "$DMROOT.LANDevice.1.WLANConfiguration.$j." && {
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.Enable" "1" "anyfi_service_get_enable $ifname" "anyfi_service_set_enable $ifname" "xsd:boolean"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.Status" "0" "anyfi_service_get_status $ifname" "" ""
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.WANInterface" "1" "anyfi_service_get_wan_iface $ifname" "anyfi_service_set_wan_iface $ifname" ""
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.WANPort" "1" "anyfi_service_get_wan_port $ifname" "anyfi_service_set_wan_port $ifname" "xsd:int"
+		return 0
+	}
+	return $E_INVALID_PARAMETER_NAME;
+}
+
+#######################################
+#     Data model browse instances     #
+#######################################
+
+anyfi_service_browse_instances_wlan_iface() {
+	local iface ifaces=`$UCI_SHOW wireless | grep "wireless\.@wifi-iface\[.*\]=wifi-iface" | awk -F'[.=]' '{print $2}'` 
+	for iface in $ifaces; do
+		local ifname=`$UCI_GET wireless.$iface.ifname`
+		if [ -n "$ifname" -a "`$UCI_GET anyfi.$ifname`" = service ]; then
+			local j=`lan_device_update_instance $iface`
+			sub_entry_landevice_wlanconfig_anyfi_service "$1" "$j" "$ifname"
+		fi
+	done
+	return 0
+}
+
+#######################################
+#   Data model parameters functions   #
+#######################################
+
+anyfi_service_get_enable() {
+	local val=`$UCI_GET anyfi.$1.disabled`
+	[ "$val" = "1" ] && echo "0" || echo "1"
+}
+
+anyfi_service_set_enable() {
+	local val="$2"
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+	common_set_bool "anyfi.$1.disabled" "$val" "0" "1" || return $?
+	[ `$UCI_GET anyfi.$1.disabled` = 1 ] || $UCI_DELETE anyfi.$1.disabled || return $E_INVALID_PARAMETER_NAME
+}
+
+anyfi_service_get_status() {
+	local enable=`anyfi_service_get_enable $1`
+	local pid=`cat /var/run/myfid-$1.pid`
+	if [ "$enable" = 1 ] && kill -0 $pid; then echo "Enabled"
+	elif [ "$enable" = 0 ] && ! kill -0 $pid; then echo "Disabled"
+	else echo "Error"
+	fi
+}
+
+anyfi_service_get_wan_iface() {
+	$UCI_GET anyfi.$1.wan_ifname
+}
+
+anyfi_service_set_wan_iface() {
+	local val="$2"
+	[ -z "$val" ] || ifconfig "$val" >/dev/null 2>&1 || return $E_INVALID_PARAMETER_VALUE
+	[ -z "$val" ] || $UCI_SET anyfi.$1.wan_ifname="$val" || return $E_INVALID_PARAMETER_NAME
+	[ -n "$val" ] || $UCI_DELETE anyfi.$1.wan_ifname || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+
+anyfi_service_get_wan_port() {
+	$UCI_GET anyfi.$1.wan_port || echo -1
+}
+
+anyfi_service_set_wan_port() {
+	local val="$2"
+	[ "$val" -eq 0 -o "$val" -gt 65535 ] && return $E_INVALID_PARAMETER_VALUE
+	[ "$val" -lt 0 ] || $UCI_SET anyfi.$1.wan_port="$val" || return $E_INVALID_PARAMETER_NAME
+	[ "$val" -gt 0 ] || $UCI_DELETE anyfi.$1.wan_port || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+}
+

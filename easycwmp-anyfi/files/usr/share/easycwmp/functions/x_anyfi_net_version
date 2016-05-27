@@ -1,0 +1,19 @@
+#!/bin/sh
+# Copyright (C) 2016 Anyfi Networks AB <www.anyfinetworks.com>
+
+#############################
+#   Entry point functions   #
+#############################
+
+prefix_list="$prefix_list $DMROOT.DeviceInfo.X_ANYFI_NET_Version"
+entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_DeviceInfo_X_ANYFI_NET_Version"
+entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform  entry_execute_method_root_DeviceInfo_X_ANYFI_NET_Version"
+
+entry_execute_method_root_DeviceInfo_X_ANYFI_NET_Version() {
+	case "$1" in ""|"$DMROOT."|"$DMROOT.DeviceInfo."|"$DMROOT.DeviceInfo.X_ANYFI_NET_Version")
+		common_execute_method_param "$DMROOT.DeviceInfo.X_ANYFI_NET_Version" "0" "anyfid --version" "" "" "1"
+		return 0;
+		;;
+	esac
+	return $E_INVALID_PARAMETER_NAME;
+}

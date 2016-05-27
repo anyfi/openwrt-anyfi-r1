@@ -1,0 +1,70 @@
+#!/bin/sh
+# Copyright (C) 2016 Anyfi Networks AB <www.anyfinetworks.com>
+
+#############################
+#   Entry point functions   #
+#############################
+
+prefix_list="$prefix_list $DMROOT.X_ANYFI_NET_Config."
+entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_X_ANYFI_NET_Config"
+
+entry_execute_method_root_X_ANYFI_NET_Config() {
+	case "$1" in ""|"$DMROOT."|"$DMROOT.X_ANYFI_NET_Config."*)
+			 common_execute_method_obj "$DMROOT.X_ANYFI_NET_Config." "0"
+			 common_execute_method_param "$DMROOT.X_ANYFI_NET_Config.Controller" "1" "anyfi_get_controller" "anyfi_set_controller" ""
+			 common_execute_method_param "$DMROOT.X_ANYFI_NET_Config.ControllerKey" "1" "anyfi_get_controller_key" "anyfi_set_controller_key" ""
+			 common_execute_method_param "$DMROOT.X_ANYFI_NET_Config.OptimizerKey" "1" "anyfi_get_optimizer_key" "anyfi_set_optimizer_key" ""
+		return 0
+		;;
+	esac
+	return $E_INVALID_PARAMETER_NAME;
+}
+
+#######################################
+#   Data model parameters functions   #
+#######################################
+
+ANYFI_MIN_KEY_LEN=16
+
+anyfi_get_controller() {
+	$UCI_GET anyfi.controller.hostname
+}
+
+anyfi_set_controller() {
+	local val="$1"
+	[ -z "$val" ] || $UCI_SET anyfi.controller.hostname="$val" || return $E_INVALID_PARAMETER_NAME
+	[ -n "$val" ] || $UCI_DELETE anyfi.controller.hostname || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+	return 0
+}
+
+anyfi_get_controller_key() {
+	$UCI_GET anyfi.controller.key
+}
+
+anyfi_set_controller_key() {
+	local val="$1"
+	anyfi_key_is_valid "$val" || return $?
+	[ -z "$val" ] || $UCI_SET anyfi.controller.key="$val" || return $E_INVALID_PARAMETER_NAME
+	[ -n "$val" ] || $UCI_DELETE anyfi.controller.key || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+	return 0
+}
+
+anyfi_get_optimizer_key() {
+	$UCI_GET anyfi.optimizer.key
+}
+
+anyfi_set_optimizer_key() {
+	local val="$1"
+	anyfi_key_is_valid "$val" || return $?
+	[ -z "$val" ] || $UCI_SET anyfi.optimizer.key="$val" || return $E_INVALID_PARAMETER_NAME
+	[ -n "$val" ] || $UCI_DELETE anyfi.optimizer.key || return $E_INVALID_PARAMETER_NAME
+	common_execute_command_in_apply_service "/sbin/anyfi start"
+	return 0
+}
+
+anyfi_key_is_valid() {
+	[ -z "$1" -o `echo -n "$1" | wc -c` -ge $ANYFI_MIN_KEY_LEN ] || return $E_INVALID_PARAMETER_VALUE
+	echo "$1" | grep -q '^[0-9a-fA-F]*$' || return $E_INVALID_PARAMETER_VALUE
+}
