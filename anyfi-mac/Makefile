@@ -16,7 +16,7 @@ ANYFI_ARCH := $(ARCH-y)
 ANYFI_TARGET := $(ANYFI_ARCH)-linux-$(subst C,c,$(LIBC))-$(LIBCV)
 
 PKG_NAME    := anyfi-mac
-PKG_VERSION := 1.9.19
+PKG_VERSION := 1.9.20
 PKG_RELEASE := 1
 
 PKG_LICENSE := ANYFIv1
