@@ -31,7 +31,7 @@ sub_entry_landevice_wlanconfig_anyfi_radio() {
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.MaxBSSIDs" "1" "anyfi_radio_get_max_bssids $monitor" "anyfi_radio_set_max_bssids $monitor" "xsd:int"
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.MaxClients" "1" "anyfi_radio_get_max_clients $monitor" "anyfi_radio_set_max_clients $monitor" "xsd:int"
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Floor" "1" "anyfi_radio_get_floor $monitor" "anyfi_radio_set_floor $monitor" "xsd:unsignedInt"
-		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Ceiling" "1" "anyfi_radio_get_ceiling $monitor" "anyfi_radio_set_ceiling $monitor" "xsd:unisgnedInt"
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Ceiling" "1" "anyfi_radio_get_ceiling $monitor" "anyfi_radio_set_ceiling $monitor" "xsd:unsignedInt"
 		return 0
 	}
 	return $E_INVALID_PARAMETER_NAME;
