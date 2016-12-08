@@ -7,6 +7,7 @@
 
 prefix_list="$prefix_list $DMROOT.LANDevice."
 entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Radio"
+entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Radio"
 
 entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Radio() {
 	case "$1" in ""|"$DMROOT."|"$DMROOT.LANDevice."*)
@@ -23,7 +24,7 @@ sub_entry_landevice_wlanconfig_anyfi_radio() {
 	local monitor="$4"
 	case_param "$1" belongto "$DMROOT.LANDevice.1.WLANConfiguration.$j." && {
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Enable" "1" "anyfi_radio_get_enable $monitor" "anyfi_radio_set_enable $monitor" "xsd:boolean"
-		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Status" "0" "anyfi_radio_get_status $monitor $iface" "" ""
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.Status" "0" "anyfi_radio_get_status $monitor $iface" "" "" "1"
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.WANInterface" "1" "anyfi_radio_get_wan_iface $monitor" "anyfi_radio_set_wan_iface $monitor" ""
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.WANPort" "1" "anyfi_radio_get_wan_port $monitor" "anyfi_radio_set_wan_port $monitor" "xsd:int"
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Radio.WANUplinkCapacity" "1" "anyfi_radio_get_wan_uplink $monitor" "anyfi_radio_set_wan_uplink $monitor" "xsd:int"
@@ -76,8 +77,8 @@ anyfi_radio_get_status() {
 	local enable=`anyfi_radio_get_enable $1`
 	local device=`$UCI_GET wireless.$2.device`
 	local pid=`cat /var/run/anyfid-$device.pid`
-	if [ "$enable" = 1 ] && kill -0 $pid; then echo "Enabled"
-	elif [ "$enable" = 0 ] && ! kill -0 $pid; then echo "Disabled"
+	if   [ "$enable" = 1 ] &&   anyfidctl -c /var/run/anyfidsock.$pid net | grep -q estab; then echo "Enabled"
+	elif [ "$enable" = 0 ] && ! anyfidctl -c /var/run/anyfidsock.$pid net | grep -q estab; then echo "Disabled"
 	else echo "Error"
 	fi
 }

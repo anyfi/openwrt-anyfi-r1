@@ -7,6 +7,7 @@
 
 prefix_list="$prefix_list $DMROOT.LANDevice."
 entry_execute_method_list="$entry_execute_method_list entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Service"
+entry_execute_method_list_forcedinform="$entry_execute_method_list_forcedinform entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Service"
 
 entry_execute_method_root_LANDevice_WLANConfiguration_X_ANYFI_NET_Service() {
 	case "$1" in ""|"$DMROOT."|"$DMROOT.LANDevice."*)
@@ -22,7 +23,7 @@ sub_entry_landevice_wlanconfig_anyfi_service() {
 	local ifname="$3"
 	case_param "$1" belongto "$DMROOT.LANDevice.1.WLANConfiguration.$j." && {
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.Enable" "1" "anyfi_service_get_enable $ifname" "anyfi_service_set_enable $ifname" "xsd:boolean"
-		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.Status" "0" "anyfi_service_get_status $ifname" "" ""
+		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.Status" "0" "anyfi_service_get_status $ifname" "" "" "1"
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.WANInterface" "1" "anyfi_service_get_wan_iface $ifname" "anyfi_service_set_wan_iface $ifname" ""
 		common_execute_method_param "$DMROOT.LANDevice.1.WLANConfiguration.$j.X_ANYFI_NET_Service.WANPort" "1" "anyfi_service_get_wan_port $ifname" "anyfi_service_set_wan_port $ifname" "xsd:int"
 		return 0
@@ -65,8 +66,8 @@ anyfi_service_set_enable() {
 anyfi_service_get_status() {
 	local enable=`anyfi_service_get_enable $1`
 	local pid=`cat /var/run/myfid-$1.pid`
-	if [ "$enable" = 1 ] && kill -0 $pid; then echo "Enabled"
-	elif [ "$enable" = 0 ] && ! kill -0 $pid; then echo "Disabled"
+	if   [ "$enable" = 1 ] &&   myfidctl -c /var/run/myfidsock.$pid net | grep -q estab; then echo "Enabled"
+	elif [ "$enable" = 0 ] && ! myfidctl -c /var/run/myfidsock.$pid net | grep -q estab; then echo "Disabled"
 	else echo "Error"
 	fi
 }
