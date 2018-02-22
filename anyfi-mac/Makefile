@@ -13,10 +13,11 @@ ARCH-$(CONFIG_TARGET_ar71xx) = mips32
 ARCH-$(CONFIG_TARGET_ramips) = mips32el
 ANYFI_ARCH := $(ARCH-y)
 
-ANYFI_TARGET := $(ANYFI_ARCH)-linux-$(subst C,c,$(LIBC))-$(LIBCV)
+ANYFI_TARGET := $(ANYFI_ARCH)-linux-$(subst C,c,$(LIBC_TYPE))-$(LIBC_VERSION)
 
 PKG_NAME    := anyfi-mac
-PKG_VERSION := 1.9.37
+PKG_VERSION := 1.9.38
+PKG_HASH    := skip
 PKG_RELEASE := 1
 
 PKG_LICENSE := ANYFIv1
